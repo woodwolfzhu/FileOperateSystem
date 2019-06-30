@@ -40,6 +40,10 @@ public class FileOperateSystem {                    // 文件系统类
         myfile = new MyFile(".", root);  // 在根目录中设置 . 访问项
         byte[] bt = myfile.getBytes();
         System.arraycopy(bt, 0, disk[currentLocation].data, 0, fcbSize);      // 将目录项放入相应数据块中
+        myfile = new MyFile("/", root); // 为了更新路径，在目录项中加了这一块，只为了获得当前目录的名字
+        bt = myfile.getBytes();
+        System.arraycopy(bt, 0, disk[currentLocation].data, 2 * fcbSize, fcbSize);      // 将目录项放入相应数据块中
+        // 统一放在第三个目录项的位置
         sc = new Scanner(System.in);
         operate();
     }
@@ -61,7 +65,6 @@ public class FileOperateSystem {                    // 文件系统类
             switch (subOrder[0]) {
                 case "md":
                     md(subOrder[1]);
-                    currentDirectory = currentDirectory + subOrder[1] + "/";
                     break;   // 将分割后的命令传给相应的函数
                 case "dir":
                     dir(order);
@@ -98,6 +101,7 @@ public class FileOperateSystem {                    // 文件系统类
                 default:
                     System.out.println("无法识别的命令！");
             }
+            currentDirectory = resetPath();
             System.out.print(currentDirectory + '\b' + ">:");
         }
 
@@ -150,12 +154,19 @@ public class FileOperateSystem {                    // 文件系统类
         currentLocation = newDisk1;                 // 更新当前工作数据块为新目录的位置
         fat[currentLocation].next = -1;                     // 新建立的目录只占用一个数据块，用-1表示结束于本盘块
 
-        i = seekNullData();
-        byte[] bt1 = myFile1.getBytes();// 在当前数据块寻找空白表项
+        i = seekNullData();// 在当前数据块寻找空白表项
+        byte[] bt1 = myFile1.getBytes();
         System.arraycopy(bt1, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
-        i = seekNullData();
-        byte[] bt2 = myFile2.getBytes();// 在当前数据块寻找空白表项
+
+        i = seekNullData();// 在当前数据块寻找空白表项
+        byte[] bt2 = myFile2.getBytes();
         System.arraycopy(bt2, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
+
+        i = seekNullData();// 在当前数据块寻找空白表项
+        MyFile myFile3 = new MyFile(fileNme, currentLocation);
+        byte[] bt3 = myFile3.getBytes();
+        System.arraycopy(bt3, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
+
         System.out.println("目录新建成功！");
     }
 
@@ -262,7 +273,7 @@ public class FileOperateSystem {                    // 文件系统类
             String[] subOrder1 = subOrder[1].split("/");
 
             if (subOrder1.length < 1) {       // 直接切换到根目录
-                currentDirectory = "//";
+//                currentDirectory = "//";
                 currentLocation = root;
                 return;
             }
@@ -288,11 +299,11 @@ public class FileOperateSystem {                    // 文件系统类
             }
             if (i * fcbSize == size) {
                 System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
-                currentDirectory = currentDirectory + '/';
+//                currentDirectory = currentDirectory + '/';
                 return;
             }
-
-            currentDirectory = resetPath(subOrder);
+//
+//            currentDirectory = resetPath(subOrder);
 //            System.out.println(currentDirectory);
         } else {       // 输入的指令为 dir
             System.out.println("输入的命令不正确，请重新输入！");
@@ -352,7 +363,7 @@ public class FileOperateSystem {                    // 文件系统类
 
         fat[newDisk1].next = -1;                     // 新建立的文件只占用一个数据块，用-1表示结束于本盘块
         currentLocation = currentDisk;                 // 更新当前工作数据块为之前目录所在位置，新建文件不应当更改当前位置
-        currentDirectory = currentDir;                  // 更新当前工作目录为之前目录，新建文件不应当更改当前位置
+//        currentDirectory = currentDir;                  // 更新当前工作目录为之前目录，新建文件不应当更改当前位置
 
         System.out.println("文件新建成功！");
     }
@@ -371,8 +382,8 @@ public class FileOperateSystem {                    // 文件系统类
                 return;
             }
 
-            String currentDir = currentDirectory;  // 下面的操作会对currentDirectory做出不正确的改变，
-            currentDirectory = currentDir;
+//            String currentDir = currentDirectory;  // 下面的操作会对currentDirectory做出不正确的改变，
+//            currentDirectory = currentDir;
             currentDisk1 = seekDir(subOrder1);
             if (currentDisk1 == -4) {     // 未找到相关项
                 return;
@@ -453,7 +464,7 @@ public class FileOperateSystem {                    // 文件系统类
 
         // 数据存入盘块
         i = 0;
-        while (tb.length - size*(i+1) > 0) {
+        while (tb.length - size * (i + 1) > 0) {
             System.arraycopy(tb, i * size, disk[currentDisk].data, 0, size);
             fat[currentDisk].next = newDisk1[i];
             currentDisk = newDisk1[i];
@@ -562,8 +573,8 @@ public class FileOperateSystem {                    // 文件系统类
                 return;
             }
 
-            String currentDir = currentDirectory;  // 下面的操作会对currentDirectory做出不正确的改变，
-            currentDirectory = currentDir;
+//            String currentDir = currentDirectory;  // 下面的操作会对currentDirectory做出不正确的改变，
+//            currentDirectory = currentDir;
             currentDisk1 = seekDir(subOrder1);
             if (currentDisk1 == -4) {     // 未找到相关项
                 return;
@@ -615,8 +626,8 @@ public class FileOperateSystem {                    // 文件系统类
                 return;
             }
 
-            String currentDir = currentDirectory;  // 下面的操作会对currentDirectory做出不正确的改变，
-            currentDirectory = currentDir;
+//            String currentDir = currentDirectory;  // 下面的操作会对currentDirectory做出不正确的改变，
+//            currentDirectory = currentDir;
             currentDisk1 = seekDir(subOrder1);
             if (currentDisk1 == -4) {     // 未找到相关项
                 return;
@@ -669,7 +680,7 @@ public class FileOperateSystem {                    // 文件系统类
 
         // 数据存入盘块
         i = 0;
-        while (tb.length - size*(i+1) > 0) {
+        while (tb.length - size * (i + 1) > 0) {
             System.arraycopy(tb, i * size, disk[currentDisk].data, 0, size);
             fat[currentDisk].next = newDisk1[i];
             currentDisk = newDisk1[i];
@@ -712,7 +723,7 @@ public class FileOperateSystem {                    // 文件系统类
         //order.length == 2 &&
         if (order[0].equals("")) {
             diskLocation = root;
-            currentDirectory = "/";
+//            currentDirectory = "/";
             x = 1;
         } else {
             diskLocation = currentLocation;
@@ -763,26 +774,29 @@ public class FileOperateSystem {                    // 文件系统类
         return name;
     }
 
-    String resetPath(String[] subOrder) {
-        // 获得md cd 命令后的目录
+    String resetPath() {
+        // 获得md cd 命令后的目录.
+        int currentDisk = currentLocation;
         int n;
-        String path;
-        String[] subOrder1 = subOrder[1].split("/");
-        if (subOrder1[0].equals(".")) {
-            path = new String(disk[currentLocation].data, 0, 9);
-
-        } else if (subOrder1[0].equals("..")) {
-            path = new String(disk[currentLocation].data, 16, 9);
-        } else {
-            path = "/" + subOrder[1] + "/";
-            return path;
+        String path = "";
+        String name;
+        while (true) {
+            name = new String(disk[currentDisk].data, 2 * fcbSize, 9); // 获得当前所在目录的名字
+            name = removeNullChar(name);  // 去掉末尾空白字符
+            if(!name.equals("/")) {       // 判断是否到了根目录
+                path = name + "/" + path;   // 添加名字到路径
+                currentDisk = (disk[currentDisk].data[14 + fcbSize] >> 8 & 0xff)
+                        + (disk[currentDisk].data[15 + fcbSize] & 0xff);     // 获得父目录的首块号
+            }
+            else{
+                path = name + path;   // 添加名字到路径,根目录本来就是"/" ，再加"/"就重复了
+                break;
+            }
         }
-
-
-        for (n = 1; n < subOrder1.length; n++) {
-            path = path + subOrder1[n];
+        if(path.equals("/")){   // 如果当前目录就是根目录，那么path="/",在上面输出路径时会退格，那么输出的内容就不合适
+            // 所以这里要加一个"/"
+            path = path +"/";
         }
-        path = "/" + path + "/";
         return path;
     }
 
