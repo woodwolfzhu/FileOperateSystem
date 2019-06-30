@@ -64,7 +64,7 @@ public class FileOperateSystem {                    // 文件系统类
             String[] subOrder = order.split(" ");
             switch (subOrder[0]) {
                 case "md":
-                    md(subOrder[1]);
+                    md(order);
                     break;   // 将分割后的命令传给相应的函数
                 case "dir":
                     dir(order);
@@ -109,11 +109,16 @@ public class FileOperateSystem {                    // 文件系统类
 
 
     void md(String order) { // 新建目录
-        String[] subOrder = order.split("/");
+        String[] sub =order.split(" ");
+        String[] subOrder = sub[1].split("/");
         if (subOrder.length == 1) {      // 在当前目录新建目录
             mdDir(subOrder[0]);
 
         } else if (subOrder.length > 1) { // 根据相对路径或绝对路径建立目录
+            int x = order.lastIndexOf(subOrder[subOrder.length-1]);
+            String order2 = order.substring(0,x);
+            System.out.println(order2);
+            cd(order2);
             mdDir(subOrder[subOrder.length - 1]);
         } else {
             System.out.println("命令输入有误，请重新输入！");
@@ -123,7 +128,7 @@ public class FileOperateSystem {                    // 文件系统类
     void mdDir(String fileName) {      // 新建目录项
         // 判断当前目录中是否有同名文件
         String directory = printDir(currentLocation);
-        if(directory.indexOf(fileName) != -1){
+        if (directory.indexOf(fileName) != -1) {
             System.out.println("文件已存在！");
             return;
         }
@@ -205,6 +210,13 @@ public class FileOperateSystem {                    // 文件系统类
                 if (fileName.equals(subOrder1[subOrder1.length - 1])) {
                     currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
                             | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
+
+                    String extensionName = getClss(currentDisk1,i);
+
+                    if (!extensionName.equals("dir")) {
+                        System.out.println("目标文件不是目录");
+                        return;
+                    }
                     break;
                 } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
                     continue;
@@ -231,12 +243,12 @@ public class FileOperateSystem {                    // 文件系统类
                 continue;
             }
             fileName = removeNullChar(fileName);
-            if(i == 2 || fileName.equals("..")){    // 之所以不直接从第四项开始而是用判断来控制，是因为root目录下的第二项可以存其他目录
+            if (i == 2 || fileName.equals("..")) {    // 之所以不直接从第四项开始而是用判断来控制，是因为root目录下的第二项可以存其他目录
                 // 可以将 disk[2].data[fcbSize] 设置为一个假目录项，那样就可以直接从第四项开始遍历了，以空间换时间
                 continue;
             }
 
-            directory = directory+fileName;
+            directory = directory + fileName+"   " ;
         }
         return directory;
     }
@@ -278,10 +290,10 @@ public class FileOperateSystem {                    // 文件系统类
     void delFileorDir(int i, int currentDisk1) { // 删除文件或目录项
         int desDisk = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
                 | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
-        String attribute = new String(disk[currentDisk1].data,9+i*fcbSize,3);
+        String attribute = new String(disk[currentDisk1].data, 9 + i * fcbSize, 3);
         attribute = removeNullChar(attribute);
-        if(attribute.equals("dir")){
-            if(!ifEmpty(desDisk)){
+        if (attribute.equals("dir")) {
+            if (!ifEmpty(desDisk)) {
                 System.out.println("无法删除非空目录项！");
                 return;
             }
@@ -301,12 +313,19 @@ public class FileOperateSystem {                    // 文件系统类
         }
         System.out.println("删除成功！");
     }
-    boolean ifEmpty(int currentLocation){
-        int i=3;
-        for(i=3;i*fcbSize<size;i++){
-            String name = new String(disk[currentLocation].data,i*fcbSize,9);
-            name=removeNullChar(name);
-            if(!name.equals("")){
+
+    String getClss(int currentDisk,int i){ // 获得目标文件的类型
+        String extensionName = new String(disk[currentDisk].data, 9 + i * fcbSize, 3);
+        extensionName = removeNullChar(extensionName);  // 去掉末尾的空白字符
+        return extensionName;
+    }
+
+    boolean ifEmpty(int currentLocation) {  // 判断目录是否为空
+        int i = 3;
+        for (i = 3; i * fcbSize < size; i++) {
+            String name = new String(disk[currentLocation].data, i * fcbSize, 9);
+            name = removeNullChar(name);
+            if (!name.equals("")) {
                 return false;
             }
         }
@@ -322,7 +341,6 @@ public class FileOperateSystem {                    // 文件系统类
             String[] subOrder1 = subOrder[1].split("/");
 
             if (subOrder1.length < 1) {       // 直接切换到根目录
-//                currentDirectory = "//";
                 currentLocation = root;
                 return;
             }
@@ -336,9 +354,16 @@ public class FileOperateSystem {                    // 文件系统类
                 if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
                     continue;
                 }
+
+                String extensionName = getClss(currentDisk1,i);
+                if(!extensionName.equals("dir")){
+                    System.out.println("目标文件不是目录，命令无法执行！");
+                    return;
+                }
                 String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
 
                 fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
+
 
                 if (fileName.equals(subOrder1[subOrder1.length - 1])) {
                     currentLocation = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
@@ -348,13 +373,10 @@ public class FileOperateSystem {                    // 文件系统类
             }
             if (i * fcbSize == size) {
                 System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
-//                currentDirectory = currentDirectory + '/';
                 return;
             }
-//
-//            currentDirectory = resetPath(subOrder);
-//            System.out.println(currentDirectory);
-        } else {       // 输入的指令为 dir
+
+        } else {       // 输入的指令为 cd
             System.out.println("输入的命令不正确，请重新输入！");
         }
     }
