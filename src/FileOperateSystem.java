@@ -112,20 +112,23 @@ public class FileOperateSystem {                    // 文件系统类
         String[] sub =order.split(" ");
         String[] subOrder = sub[1].split("/");
         if (subOrder.length == 1) {      // 在当前目录新建目录
-            mdDir(subOrder[0]);
-
+            mdDir(subOrder);
         } else if (subOrder.length > 1) { // 根据相对路径或绝对路径建立目录
-            int x = order.lastIndexOf(subOrder[subOrder.length-1]);
-            String order2 = order.substring(0,x);
-            System.out.println(order2);
-            cd(order2);
-            mdDir(subOrder[subOrder.length - 1]);
+            mdDir(subOrder);
         } else {
             System.out.println("命令输入有误，请重新输入！");
         }
     }
 
-    void mdDir(String fileName) {      // 新建目录项
+    void mdDir(String[] subOrder) {      // 新建目录项
+        String fileName = subOrder[subOrder.length-1];
+
+        int currentDisk = seekDir(subOrder);
+        if(currentDisk == -4){
+            return;
+        }
+        currentLocation = currentDisk;
+
         // 判断当前目录中是否有同名文件
         String directory = printDir(currentLocation);
         if (directory.indexOf(fileName) != -1) {
@@ -386,11 +389,13 @@ public class FileOperateSystem {                    // 文件系统类
         String[] subOrder1 = subOrder[1].split("/");
         if (subOrder1.length == 1) {      // 在当前目录新建目录
             nf(subOrder1);
-        } else {
+        } else if(subOrder1.length > 1){
+            nf(subOrder1);
+        }else{
             System.out.println("命令输入有误，请重新输入！");
             return;
         }
-//        currentDirectory = currentDirectory+"/"; // 新建文件，但是工作的目录不变
+
     }
 
     void nf(String[] order) {       // 采用第一种实现方式，先建立文件，之后在编辑文件
@@ -403,10 +408,11 @@ public class FileOperateSystem {                    // 文件系统类
             return;
         }
 
-        int currentDisk = currentLocation;
-        String currentDir = currentDirectory;  // 下面的操作会对currentLocation和currentDirectory做出不正确的改变，
-        // 所有这里先把他们存下来
-        currentLocation = seekDir(order);
+        int currentDisk = seekDir(order);// 下面的操作会对currentLocation做出不正确的改变，所以这里先把他们存下来
+        if(currentDisk == -4){
+            return;
+        }
+        currentLocation = currentDisk;
 
         int i = seekNullData();        // 在当前数据块寻找空白表项
         if (i == -3) {            // 当前数据块已用完
@@ -434,7 +440,6 @@ public class FileOperateSystem {                    // 文件系统类
 
         fat[newDisk1].next = -1;                     // 新建立的文件只占用一个数据块，用-1表示结束于本盘块
         currentLocation = currentDisk;                 // 更新当前工作数据块为之前目录所在位置，新建文件不应当更改当前位置
-//        currentDirectory = currentDir;                  // 更新当前工作目录为之前目录，新建文件不应当更改当前位置
 
         System.out.println("文件新建成功！");
     }
