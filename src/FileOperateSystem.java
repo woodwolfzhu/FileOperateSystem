@@ -120,7 +120,13 @@ public class FileOperateSystem {                    // 文件系统类
         }
     }
 
-    void mdDir(String fileNme) {      // 新建目录项
+    void mdDir(String fileName) {      // 新建目录项
+        // 判断当前目录中是否有同名文件
+        String directory = printDir(currentLocation);
+        if(directory.indexOf(fileName) != -1){
+            System.out.println("文件已存在！");
+            return;
+        }
         int newDisk1 = 0;
         newDisk1 = seekNullDisk();   // 为新目录项分配新的空白盘块
         if (newDisk1 == -3) {       // 所有存储空间已用完
@@ -146,7 +152,7 @@ public class FileOperateSystem {                    // 文件系统类
         // 当空白空间足够时，才能成功新建目录
 
 
-        MyFile myFile = new MyFile(fileNme, newDisk1);   // 建立目录项
+        MyFile myFile = new MyFile(fileName, newDisk1);   // 建立目录项
         byte[] bt = myFile.getBytes();
         System.arraycopy(bt, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
 
@@ -163,7 +169,7 @@ public class FileOperateSystem {                    // 文件系统类
         System.arraycopy(bt2, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
 
         i = seekNullData();// 在当前数据块寻找空白表项
-        MyFile myFile3 = new MyFile(fileNme, currentLocation);
+        MyFile myFile3 = new MyFile(fileName, currentLocation);
         byte[] bt3 = myFile3.getBytes();
         System.arraycopy(bt3, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
 
@@ -182,7 +188,7 @@ public class FileOperateSystem {                    // 文件系统类
             String[] subOrder1 = subOrder[1].split("/");
             if (subOrder1.length == 0) {
                 currentDisk1 = root;
-                printDir(currentDisk1);
+                System.out.println(printDir(currentDisk1));
                 return;
             }
 
@@ -211,13 +217,14 @@ public class FileOperateSystem {                    // 文件系统类
         } else {       // 输入的指令为 dir
             currentDisk1 = currentLocation;
         }
-        printDir(currentDisk1);
+        System.out.println(printDir(currentDisk1));
 
 
     }
 
-    void printDir(int currentDisk) {
+    String printDir(int currentDisk) {
         int i;
+        String directory = "";
         for (i = 1; i * fcbSize < size; i++) { // "." , "..",自己的名字，这三项都不用输出
             String fileName = new String(disk[currentDisk].data, 0 + i * fcbSize, 9);
             if (disk[currentDisk].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所以要全部遍历
@@ -229,8 +236,9 @@ public class FileOperateSystem {                    // 文件系统类
                 continue;
             }
 
-            System.out.println(fileName);
+            directory = directory+fileName;
         }
+        return directory;
     }
 
     void rd(String order) {
