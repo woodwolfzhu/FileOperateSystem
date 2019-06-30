@@ -59,9 +59,23 @@ public class FileOperateSystem {                    // 文件系统类
     void operate() {     // 所有操作的入口
         System.out.print(currentDirectory + ">:");
         while (true) {
-
             String order = sc.nextLine();
             String[] subOrder = order.split(" ");
+            if (subOrder.length < 2) {
+                if (subOrder[0].equals("dir")) {
+                    dir(order);
+                    currentDirectory = resetPath();
+                    System.out.print(currentDirectory + '\b' + ">:");
+                    continue;
+                } else if (subOrder[0].equals("exit")) {
+                    return;
+                } else {
+                    System.out.println("命令输入有误，请重新输入！");
+                    currentDirectory = resetPath();
+                    System.out.print(currentDirectory + '\b' + ">:");
+                    continue;
+                }
+            }
             switch (subOrder[0]) {
                 case "md":
                     md(order);
@@ -94,8 +108,6 @@ public class FileOperateSystem {                    // 文件系统类
                 case "attr":
                     attr(order);
                     break;
-                case "exit":
-                    System.exit(1);
                 case "":
                     break;
                 default:
@@ -107,9 +119,8 @@ public class FileOperateSystem {                    // 文件系统类
 
     }
 
-
     void md(String order) { // 新建目录
-        String[] sub =order.split(" ");
+        String[] sub = order.split(" ");
         String[] subOrder = sub[1].split("/");
         if (subOrder.length == 1) {      // 在当前目录新建目录
             mdDir(subOrder);
@@ -121,10 +132,10 @@ public class FileOperateSystem {                    // 文件系统类
     }
 
     void mdDir(String[] subOrder) {      // 新建目录项
-        String fileName = subOrder[subOrder.length-1];
+        String fileName = subOrder[subOrder.length - 1];
 
         int currentDisk = seekDir(subOrder);
-        if(currentDisk == -4){
+        if (currentDisk == -4) {
             return;
         }
         currentLocation = currentDisk;
@@ -159,11 +170,9 @@ public class FileOperateSystem {                    // 文件系统类
         }
         // 当空白空间足够时，才能成功新建目录
 
-
         MyFile myFile = new MyFile(fileName, newDisk1);   // 建立目录项
         byte[] bt = myFile.getBytes();
         System.arraycopy(bt, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
-
 
         currentLocation = newDisk1;                 // 更新当前工作数据块为新目录的位置
         fat[currentLocation].next = -1;                     // 新建立的目录只占用一个数据块，用-1表示结束于本盘块
@@ -190,8 +199,6 @@ public class FileOperateSystem {                    // 文件系统类
         int m = 0;
         String[] subOrder = order.split(" ");
 
-//        System.out.println(subOrder1.length);
-
         if (subOrder.length > 1) {     // 输入信息为 dir user/sa/sfds 这类指令
             String[] subOrder1 = subOrder[1].split("/");
             if (subOrder1.length == 0) {
@@ -214,7 +221,7 @@ public class FileOperateSystem {                    // 文件系统类
                     currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
                             | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
 
-                    String extensionName = getClss(currentDisk1,i);
+                    String extensionName = getClss(currentDisk1, i);
 
                     if (!extensionName.equals("dir")) {
                         System.out.println("目标文件不是目录");
@@ -232,12 +239,10 @@ public class FileOperateSystem {                    // 文件系统类
         } else {       // 输入的指令为 dir
             currentDisk1 = currentLocation;
         }
-        System.out.println(printDir(currentDisk1));
-
-
+        System.out.println(printDir(currentDisk1)); // 获得当前目录下所有目录项
     }
 
-    String printDir(int currentDisk) {
+    String printDir(int currentDisk) {  // 获取目录中的所有项
         int i;
         String directory = "";
         for (i = 1; i * fcbSize < size; i++) { // "." , "..",自己的名字，这三项都不用输出
@@ -251,7 +256,7 @@ public class FileOperateSystem {                    // 文件系统类
                 continue;
             }
 
-            directory = directory + fileName+"   " ;
+            directory = directory + fileName + "   ";
         }
         return directory;
     }
@@ -261,33 +266,28 @@ public class FileOperateSystem {                    // 文件系统类
         int currentDisk1 = 0;
         int m = 0;
         String[] subOrder = order.split(" ");
-        if (subOrder.length > 1) {     // 输入信息必须为 rd user/sa/sfds 这类指令，而不能是rd （区别于dir）
-            String[] subOrder1 = subOrder[1].split("/");
-            currentDisk1 = seekDir(subOrder1);
-            if (currentDisk1 == -4) {     // 未找到相关项
-                return;
-            }
-            for (i = 0; i * fcbSize < size; i++) {
-                String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
-
-                fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
-
-                if (fileName.equals(subOrder1[subOrder1.length - 1])) {
-                    delFileorDir(i, currentDisk1);
-                    // 清空
-                    break;
-                } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
-                    continue;
-                }
-            }
-            if (i * fcbSize == size) {
-                System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
-                return;
-            }
-        } else {       // 输入的指令为 dir
-            System.out.println("输入的命令不正确，请重新输入！");
+        String[] subOrder1 = subOrder[1].split("/");
+        currentDisk1 = seekDir(subOrder1);
+        if (currentDisk1 == -4) {     // 未找到相关项
+            return;
         }
+        for (i = 0; i * fcbSize < size; i++) {
+            String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
 
+            fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
+
+            if (fileName.equals(subOrder1[subOrder1.length - 1])) {
+                delFileorDir(i, currentDisk1);
+                // 清空
+                break;
+            } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
+                continue;
+            }
+        }
+        if (i * fcbSize == size) {
+            System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
+            return;
+        }
     }
 
     void delFileorDir(int i, int currentDisk1) { // 删除文件或目录项
@@ -317,7 +317,7 @@ public class FileOperateSystem {                    // 文件系统类
         System.out.println("删除成功！");
     }
 
-    String getClss(int currentDisk,int i){ // 获得目标文件的类型
+    String getClss(int currentDisk, int i) { // 获得目标文件的类型
         String extensionName = new String(disk[currentDisk].data, 9 + i * fcbSize, 3);
         extensionName = removeNullChar(extensionName);  // 去掉末尾的空白字符
         return extensionName;
@@ -340,47 +340,42 @@ public class FileOperateSystem {                    // 文件系统类
         int currentDisk1 = 0;
         int m = 0;
         String[] subOrder = order.split(" ");
-        if (subOrder.length > 1) {     // 输入信息必须为 cd user/sa/sfds 这类指令，而不能是cd （区别于dir）
-            String[] subOrder1 = subOrder[1].split("/");
+        String[] subOrder1 = subOrder[1].split("/");
 
-            if (subOrder1.length < 1) {       // 直接切换到根目录
-                currentLocation = root;
+        if (subOrder1.length < 1) {       // 直接切换到根目录
+            currentLocation = root;
+            return;
+        }
+
+        currentDisk1 = seekDir(subOrder1);
+        if (currentDisk1 == -4) {     // 未找到相关项
+            return;
+        }
+
+        for (i = 0; i * fcbSize < size; i++) {
+            if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
+                continue;
+            }
+
+            String extensionName = getClss(currentDisk1, i);
+            if (!extensionName.equals("dir")) {
+                System.out.println("目标文件不是目录，命令无法执行！");
                 return;
             }
+            String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
 
-            currentDisk1 = seekDir(subOrder1);
-            if (currentDisk1 == -4) {     // 未找到相关项
-                return;
+            fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
+
+
+            if (fileName.equals(subOrder1[subOrder1.length - 1])) {
+                currentLocation = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
+                        | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
+                break;
             }
-
-            for (i = 0; i * fcbSize < size; i++) {
-                if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
-                    continue;
-                }
-
-                String extensionName = getClss(currentDisk1,i);
-                if(!extensionName.equals("dir")){
-                    System.out.println("目标文件不是目录，命令无法执行！");
-                    return;
-                }
-                String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
-
-                fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
-
-
-                if (fileName.equals(subOrder1[subOrder1.length - 1])) {
-                    currentLocation = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
-                            | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
-                    break;
-                }
-            }
-            if (i * fcbSize == size) {
-                System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
-                return;
-            }
-
-        } else {       // 输入的指令为 cd
-            System.out.println("输入的命令不正确，请重新输入！");
+        }
+        if (i * fcbSize == size) {
+            System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
+            return;
         }
     }
 
@@ -389,9 +384,9 @@ public class FileOperateSystem {                    // 文件系统类
         String[] subOrder1 = subOrder[1].split("/");
         if (subOrder1.length == 1) {      // 在当前目录新建目录
             nf(subOrder1);
-        } else if(subOrder1.length > 1){
+        } else if (subOrder1.length > 1) {
             nf(subOrder1);
-        }else{
+        } else {
             System.out.println("命令输入有误，请重新输入！");
             return;
         }
@@ -409,7 +404,7 @@ public class FileOperateSystem {                    // 文件系统类
         }
 
         int currentDisk = seekDir(order);// 下面的操作会对currentLocation做出不正确的改变，所以这里先把他们存下来
-        if(currentDisk == -4){
+        if (currentDisk == -4) {
             return;
         }
         currentLocation = currentDisk;
@@ -437,7 +432,6 @@ public class FileOperateSystem {                    // 文件系统类
         byte[] bt = myFile.getBytes();
         System.arraycopy(bt, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
 
-
         fat[newDisk1].next = -1;                     // 新建立的文件只占用一个数据块，用-1表示结束于本盘块
         currentLocation = currentDisk;                 // 更新当前工作数据块为之前目录所在位置，新建文件不应当更改当前位置
 
@@ -449,47 +443,48 @@ public class FileOperateSystem {                    // 文件系统类
         int currentDisk1 = 0;
         int m = 0;
         String[] subOrder = order.split(" ");
+        String[] subOrder1 = subOrder[1].split("/");
+        String[] name = subOrder1[subOrder1.length - 1].split("\\.");
+        if (name.length < 1) {
+            System.out.println("输入的文件格式不正确，无法编辑！");
+            return;
+        }
+        currentDisk1 = seekDir(subOrder1);
+        if (currentDisk1 == -4) {     // 未找到相关项
+            return;
+        }
+        for (i = 0; i * fcbSize < size; i++) {
+            String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
 
-        if (subOrder.length > 1) {     // 输入信息必须为 edit user/sa/sfds 这类指令，而不能是edit （区别于dir）
-            String[] subOrder1 = subOrder[1].split("/");
-            String[] name = subOrder1[subOrder1.length - 1].split("\\.");
-            if (name.length < 1) {
-                System.out.println("输入的文件格式不正确，无法编辑！");
-                return;
-            }
-            currentDisk1 = seekDir(subOrder1);
-            if (currentDisk1 == -4) {     // 未找到相关项
-                return;
-            }
-            for (i = 0; i * fcbSize < size; i++) {
-                String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
+            fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
 
-                fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
+            if (fileName.equals(subOrder1[subOrder1.length - 1])) {
 
-                if (fileName.equals(subOrder1[subOrder1.length - 1])) {
+                // 对文件属性进行判断，看是否只读
+                boolean attribute;
+                attribute = (disk[currentDisk1].data[12 + i * fcbSize] == 0x00) ? false : true;
+                String extensionName = getClss(currentDisk1, i);
 
-                    // 对文件属性进行判断，看是否只读
-                    boolean attribute;
-                    attribute = (disk[currentDisk1].data[12 + i * fcbSize] == 0x00) ? false : true;
-                    if (!attribute) {
-                        currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
-                                | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
-                        text(currentDisk1);
-                    } else {
-                        System.out.println("文件只读，不可编辑！");
-                    }
-                    break;
-
-                } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
-                    continue;
+                if (extensionName.equals("dir")) {
+                    System.out.println("目标文件不是文本文件！");
+                    return;
                 }
+                if (!attribute) {
+                    currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
+                            | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
+                    text(currentDisk1);
+                } else {
+                    System.out.println("文件只读，不可编辑！");
+                }
+                break;
+
+            } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
+                continue;
             }
-            if (i * fcbSize == size) {
-                System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 文件");
-                return;
-            }
-        } else {       // 输入的指令为 dir
-            System.out.println("输入的命令不正确，请重新输入！");
+        }
+        if (i * fcbSize == size) {
+            System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 文件");
+            return;
         }
     }
 
@@ -554,43 +549,38 @@ public class FileOperateSystem {                    // 文件系统类
         int currentDisk1 = 0;
         String text = new String();
         String[] subOrder = order.split(" ");
-        if (subOrder.length > 1) {     // 输入信息必须为 type user/sa/sfds 这类指令，而不能是rd （区别于dir）
-            String[] subOrder1 = subOrder[1].split("/");
-            currentDisk1 = seekDir(subOrder1);
-            if (currentDisk1 == -4) {     // 未找到相关项
-                System.out.println("文件不存在");
-                return " ";
-            }
-            for (i = 0; i * fcbSize < size; i++) {
-                String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
-
-                fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
-
-                if (fileName.equals(subOrder1[subOrder1.length - 1])) {
-                    // 判断扩展名是否为dir，不是才可查看
-                    String extensionName = new String(disk[currentDisk1].data, 9 + i * fcbSize, 3);
-
-                    extensionName = removeNullChar(extensionName);  // 去掉末尾的空白字符
-
-                    if (extensionName.equals("dir")) {
-                        System.out.println("目标文件不是文本文件");
-                        return " ";
-                    }
-                    text = openFile(currentDisk1, i);
-                    // 打开数据块
-                    break;
-                } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
-                    continue;
-                }
-            }
-            if (i * fcbSize == size) {
-                System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
-                return " ";
-            }
-        } else {       // 输入的指令为 dir
-            System.out.println("输入的命令不正确，请重新输入！");
+        String[] subOrder1 = subOrder[1].split("/");
+        currentDisk1 = seekDir(subOrder1);
+        if (currentDisk1 == -4) {     // 未找到相关项
+            System.out.println("文件不存在");
+            return " ";
         }
+        for (i = 0; i * fcbSize < size; i++) {
+            String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
 
+            fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
+
+            if (fileName.equals(subOrder1[subOrder1.length - 1])) {
+                // 判断扩展名是否为dir，不是才可查看
+                String extensionName = new String(disk[currentDisk1].data, 9 + i * fcbSize, 3);
+
+                extensionName = removeNullChar(extensionName);  // 去掉末尾的空白字符
+
+                if (extensionName.equals("dir")) {
+                    System.out.println("目标文件不是文本文件");
+                    return " ";
+                }
+                text = openFile(currentDisk1, i);
+                // 打开数据块
+                break;
+            } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
+                continue;
+            }
+        }
+        if (i * fcbSize == size) {
+            System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 文本文件");
+            return " ";
+        }
         return text;
     }
 
@@ -615,12 +605,9 @@ public class FileOperateSystem {                    // 文件系统类
             location = fat[location].next;
         }
         System.arraycopy(disk[location].data, 0, tb, num * size, size);
-
         String text = new String(tb);
         return text;
-
     }
-
 
     void copy(String order) {
         String[] subOrder = order.split(" ");
@@ -637,51 +624,43 @@ public class FileOperateSystem {                    // 文件系统类
         int currentDisk1 = 0;
         int m = 0;
         String[] subOrder = order.split(" ");
+        String[] subOrder1 = subOrder[1].split("/");
+        String[] name = subOrder1[subOrder1.length - 1].split("\\.");
+        if (name.length < 1) {
+            System.out.println("输入的文件格式不正确，无法编辑！");
+            return;
+        }
+        currentDisk1 = seekDir(subOrder1);
+        if (currentDisk1 == -4) {     // 未找到相关项
+            return;
+        }
 
-        if (subOrder.length > 2) {     // 输入信息必须为 attr user/sa/sfds.txt -r 这类指令
-            String[] subOrder1 = subOrder[1].split("/");
-            String[] name = subOrder1[subOrder1.length - 1].split("\\.");
-            if (name.length < 1) {
-                System.out.println("输入的文件格式不正确，无法编辑！");
-                return;
-            }
+        for (i = 0; i * fcbSize < size; i++) {
+            String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
 
-//            String currentDir = currentDirectory;  // 下面的操作会对currentDirectory做出不正确的改变，
-//            currentDirectory = currentDir;
-            currentDisk1 = seekDir(subOrder1);
-            if (currentDisk1 == -4) {     // 未找到相关项
-                return;
-            }
+            fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
 
-            for (i = 0; i * fcbSize < size; i++) {
-                String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
-
-                fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
-
-                if (fileName.equals(subOrder1[subOrder1.length - 1])) { // 找到目标项
-                    switch (subOrder[2]) {        // 根据命令，对属性进行设置
-                        case "-r":
-                            disk[currentDisk1].data[12 + i * fcbSize] = 0x00;
-                            System.out.println("属性修改成功！");
-                            break;
-                        case "+r":
-                            disk[currentDisk1].data[12 + i * fcbSize] = 0x01;   // 只读，不可编辑
-                            System.out.println("属性修改成功！");
-                            break;
-                        default:
-                            System.out.println("属性输入有误");
-                    }
-                    break;
-                } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
-                    continue;
+            if (fileName.equals(subOrder1[subOrder1.length - 1])) { // 找到目标项
+                switch (subOrder[2]) {        // 根据命令，对属性进行设置
+                    case "-r":
+                        disk[currentDisk1].data[12 + i * fcbSize] = 0x00;
+                        System.out.println("属性修改成功！");
+                        break;
+                    case "+r":
+                        disk[currentDisk1].data[12 + i * fcbSize] = 0x01;   // 只读，不可编辑
+                        System.out.println("属性修改成功！");
+                        break;
+                    default:
+                        System.out.println("属性输入有误");
                 }
+                break;
+            } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
+                continue;
             }
-            if (i * fcbSize == size) {
-                System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 文件");
-                return;
-            }
-        } else {
-            System.out.println("输入的命令不正确，请重新输入！");
+        }
+        if (i * fcbSize == size) {
+            System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 文件");
+            return;
         }
     }
 
@@ -691,41 +670,32 @@ public class FileOperateSystem {                    // 文件系统类
         int m = 0;
         String[] subOrder = order.split(" ");
 
-        if (subOrder.length > 1) {     // 输入信息必须为 edit user/sa/sfds 这类指令，而不能是edit （区别于dir）
-            String[] subOrder1 = subOrder[1].split("/");
-            String[] name = subOrder1[subOrder1.length - 1].split("\\.");
-            if (name.length < 1) {
-                System.out.println("输入的文件格式不正确，无法编辑！");
-                return;
-            }
+        String[] subOrder1 = subOrder[1].split("/");
+        String[] name = subOrder1[subOrder1.length - 1].split("\\.");
+        if (name.length < 1) {
+            System.out.println("输入的文件格式不正确，无法编辑！");
+            return;
+        }
 
-//            String currentDir = currentDirectory;  // 下面的操作会对currentDirectory做出不正确的改变，
-//            currentDirectory = currentDir;
-            currentDisk1 = seekDir(subOrder1);
-            if (currentDisk1 == -4) {     // 未找到相关项
-                return;
+        currentDisk1 = seekDir(subOrder1);
+        if (currentDisk1 == -4) {     // 未找到相关项
+            return;
+        }
+        for (i = 0; i * fcbSize < size; i++) {
+            String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
+            fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
+            if (fileName.equals(subOrder1[subOrder1.length - 1])) {
+                currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
+                        | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
+                text(currentDisk1, text);
+                break;
+            } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
+                continue;
             }
-            for (i = 0; i * fcbSize < size; i++) {
-                String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
-
-                fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
-
-                if (fileName.equals(subOrder1[subOrder1.length - 1])) {
-                    currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
-                            | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
-                    text(currentDisk1, text);
-                    break;
-
-                } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
-                    continue;
-                }
-            }
-            if (i * fcbSize == size) {
-                System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 文件");
-                return;
-            }
-        } else {       // 输入的指令为 dir
-            System.out.println("输入的命令不正确，请重新输入！");
+        }
+        if (i * fcbSize == size) {
+            System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 文件");
+            return;
         }
     }
 
@@ -762,7 +732,6 @@ public class FileOperateSystem {                    // 文件系统类
         System.arraycopy(tb, i * size, disk[currentDisk].data, 0, tb.length - i * size);
         fat[currentDisk].next = -1;
         System.out.println("数据保存成功！");
-
     }
 
     int seekNullData() {        // 在当前盘块中寻找空白的表项
@@ -773,7 +742,6 @@ public class FileOperateSystem {                    // 文件系统类
             }
         }
         return -3;
-
     }
 
     int seekNullDisk() {     // 寻找新的空白盘块
@@ -789,20 +757,16 @@ public class FileOperateSystem {                    // 文件系统类
 
     int seekDir(String[] order) {      // 根据路径寻找相应的目录项所在的数据块
         // 为了方便多个功能调用，只找到倒数第二个位置,例如：../data/li，就只找到data的位置
-
         int diskLocation = 0;
         int i = 0;
         int x = 0;
-        //order.length == 2 &&
         if (order[0].equals("")) {
             diskLocation = root;
-//            currentDirectory = "/";
             x = 1;
         } else {
             diskLocation = currentLocation;
             x = 0;
         }
-
 
         for (x = x; x < order.length - 1; x++) {
             for (i = 0; i * fcbSize < size; i++) {      // 为了保证不漏掉，要全部遍历一次
@@ -812,12 +776,9 @@ public class FileOperateSystem {                    // 文件系统类
 
                 // 获得正确的文件名
                 String fileName = new String(disk[diskLocation].data, i * fcbSize, 9);
-
                 fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
-
                 // 判断目录项中文件名是否相同
                 if (fileName.equals(order[x])) {
-//                    tempDirectory =tempDirectory + order[x] +'/';
                     diskLocation = (disk[diskLocation].data[14 + i * fcbSize] << 8 & 0xff)
                             | (disk[diskLocation].data[15 + i * fcbSize] & 0xff);
                     break;
@@ -874,7 +835,8 @@ public class FileOperateSystem {                    // 文件系统类
 
     public static void main(String[] args) {
         FileOperateSystem a = new FileOperateSystem();
-        System.out.println(a.desinger);
+        System.out.println("设计者: " + a.desinger);
+        System.exit(1);
     }
 }
 
@@ -898,7 +860,6 @@ class Disk {            // 数据块
     Disk(int size) {
         data = new byte[size];
     }
-
 }
 
 class MyFile {        // 文件对象：文本文件、目录 每项16字节
