@@ -430,9 +430,6 @@ public class FileOperateSystem {                    // 文件系统类
                 System.out.println("输入的文件格式不正确，无法编辑！");
                 return;
             }
-
-//            String currentDir = currentDirectory;  // 下面的操作会对currentDirectory做出不正确的改变，
-//            currentDirectory = currentDir;
             currentDisk1 = seekDir(subOrder1);
             if (currentDisk1 == -4) {     // 未找到相关项
                 return;
@@ -544,14 +541,14 @@ public class FileOperateSystem {                    // 文件系统类
 
                 if (fileName.equals(subOrder1[subOrder1.length - 1])) {
                     // 判断扩展名是否为dir，不是才可查看
-//                    String extensionName = new String(disk[currentDisk1].data, 9 + i * fcbSize, 3);
-//
-//                    extensionName = removeNullChar(extensionName);  // 去掉末尾的空白字符
-//
-//                    if (extensionName.equals("dir")) {
-//                        System.out.println("目标文件不是文本文件");
-//                        return " ";
-//                    }
+                    String extensionName = new String(disk[currentDisk1].data, 9 + i * fcbSize, 3);
+
+                    extensionName = removeNullChar(extensionName);  // 去掉末尾的空白字符
+
+                    if (extensionName.equals("dir")) {
+                        System.out.println("目标文件不是文本文件");
+                        return " ";
+                    }
                     text = openFile(currentDisk1, i);
                     // 打开数据块
                     break;
@@ -883,17 +880,6 @@ class MyFile {        // 文件对象：文本文件、目录 每项16字节
     boolean read_only;      // 是否只读 1字节
     boolean isDirectory;    // 是否目录 1字节
     int firstDisk;  //首块号 2字节
-    String text;    // 文本文件的内容
-
-    MyFile(String fileName, String extensionName, String text, int firstDisk,
-           boolean read_only, boolean isDirectory) {
-        this.fileName = fileName;
-        this.extensionName = extensionName;
-        this.read_only = read_only;
-        this.isDirectory = isDirectory;
-        this.firstDisk = firstDisk;
-        this.text = text;
-    }
 
     MyFile(String fileName, String extensionName, int firstDisk) {  // 文本文件
         this.fileName = fileName;
@@ -901,7 +887,6 @@ class MyFile {        // 文件对象：文本文件、目录 每项16字节
         this.read_only = false;
         this.isDirectory = false;
         this.firstDisk = firstDisk;
-        this.text = text;
     }
 
     MyFile(String fileName, int firstDisk) {   // 目录项
@@ -910,7 +895,6 @@ class MyFile {        // 文件对象：文本文件、目录 每项16字节
         this.read_only = false;
         this.isDirectory = true;
         this.firstDisk = firstDisk;
-        this.text = text;
     }
 
     byte[] getBytes() {                     // 将文件属性的相关信息转化为byte；
