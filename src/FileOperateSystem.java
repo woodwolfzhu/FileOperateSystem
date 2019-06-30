@@ -278,6 +278,14 @@ public class FileOperateSystem {                    // 文件系统类
     void delFileorDir(int i, int currentDisk1) { // 删除文件或目录项
         int desDisk = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
                 | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
+        String attribute = new String(disk[currentDisk1].data,9+i*fcbSize,3);
+        attribute = removeNullChar(attribute);
+        if(attribute.equals("dir")){
+            if(!ifEmpty(desDisk)){
+                System.out.println("无法删除非空目录项！");
+                return;
+            }
+        }
         int x = desDisk;
         int temp;
         while (fat[x].next != -1) {       // 将fat 表中相关内容删除
@@ -292,6 +300,17 @@ public class FileOperateSystem {                    // 文件系统类
             disk[currentDisk1].data[temp + x] = '\0';
         }
         System.out.println("删除成功！");
+    }
+    boolean ifEmpty(int currentLocation){
+        int i=3;
+        for(i=3;i*fcbSize<size;i++){
+            String name = new String(disk[currentLocation].data,i*fcbSize,9);
+            name=removeNullChar(name);
+            if(!name.equals("")){
+                return false;
+            }
+        }
+        return true;
     }
 
     void cd(String order) {
