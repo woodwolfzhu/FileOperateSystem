@@ -175,12 +175,22 @@ public class FileOperateSystem {                    // 文件系统类
         int currentDisk1 = 0;
         int m = 0;
         String[] subOrder = order.split(" ");
+
+//        System.out.println(subOrder1.length);
+
         if (subOrder.length > 1) {     // 输入信息为 dir user/sa/sfds 这类指令
             String[] subOrder1 = subOrder[1].split("/");
+            if (subOrder1.length == 0) {
+                currentDisk1 = root;
+                printDir(currentDisk1);
+                return;
+            }
+
             currentDisk1 = seekDir(subOrder1);
             if (currentDisk1 == -4) { // 未找到相关项
                 return;
             }
+
             for (i = 0; i * fcbSize < size; i++) {
                 String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
 
@@ -201,12 +211,24 @@ public class FileOperateSystem {                    // 文件系统类
         } else {       // 输入的指令为 dir
             currentDisk1 = currentLocation;
         }
+        printDir(currentDisk1);
 
-        for (i = 0; i * fcbSize < size; i++) {
-            String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
-            if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
+
+    }
+
+    void printDir(int currentDisk) {
+        int i;
+        for (i = 1; i * fcbSize < size; i++) { // "." , "..",自己的名字，这三项都不用输出
+            String fileName = new String(disk[currentDisk].data, 0 + i * fcbSize, 9);
+            if (disk[currentDisk].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所以要全部遍历
                 continue;
             }
+            fileName = removeNullChar(fileName);
+            if(i == 2 || fileName.equals("..")){    // 之所以不直接从第四项开始而是用判断来控制，是因为root目录下的第二项可以存其他目录
+                // 可以将 disk[2].data[fcbSize] 设置为一个假目录项，那样就可以直接从第四项开始遍历了，以空间换时间
+                continue;
+            }
+
             System.out.println(fileName);
         }
     }
@@ -783,19 +805,18 @@ public class FileOperateSystem {                    // 文件系统类
         while (true) {
             name = new String(disk[currentDisk].data, 2 * fcbSize, 9); // 获得当前所在目录的名字
             name = removeNullChar(name);  // 去掉末尾空白字符
-            if(!name.equals("/")) {       // 判断是否到了根目录
+            if (!name.equals("/")) {       // 判断是否到了根目录
                 path = name + "/" + path;   // 添加名字到路径
                 currentDisk = (disk[currentDisk].data[14 + fcbSize] >> 8 & 0xff)
                         + (disk[currentDisk].data[15 + fcbSize] & 0xff);     // 获得父目录的首块号
-            }
-            else{
+            } else {
                 path = name + path;   // 添加名字到路径,根目录本来就是"/" ，再加"/"就重复了
                 break;
             }
         }
-        if(path.equals("/")){   // 如果当前目录就是根目录，那么path="/",在上面输出路径时会退格，那么输出的内容就不合适
+        if (path.equals("/")) {   // 如果当前目录就是根目录，那么path="/",在上面输出路径时会退格，那么输出的内容就不合适
             // 所以这里要加一个"/"
-            path = path +"/";
+            path = path + "/";
         }
         return path;
     }
