@@ -1,9 +1,10 @@
 import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 
-    public class FileOperateSystem {                    // 文件系统类
+public class FileOperateSystem {                    // 文件系统类
     String desinger;    // 设计者姓名
     String version;         // 版本号
     final int size;       //盘块大小，以byte 记，2的n次幂
@@ -118,6 +119,37 @@ import java.util.*;
         }
     }
 
+    String dealRegular(String order) { // 处理通配符
+        String[] subOrder = order.split(" ");
+        String[] subOrder1 = subOrder[1].split("/");
+        String desFile = subOrder1[subOrder1.length - 1];
+        if (desFile.indexOf("*") != -1) {
+            if (desFile.indexOf(".") == -1) {       // 目录文件
+                desFile = ".*";
+            } else {  // 文本文件
+                desFile = ".*\\..*";
+            }
+        } else if (desFile.indexOf("?") != -1) {
+                int x=0;
+                String des="";
+                for(x=0;x<desFile.length();x++){
+                    if(desFile.charAt(x) == '?'){
+                        des = des+ ".";
+                        continue;
+                    }else if(desFile.charAt(x) == '.'){
+                        des = des+ "\\"+".";
+                        continue;
+                    }
+                    des = des+desFile.charAt(x);
+                }
+                desFile =des;
+        } else {
+            return desFile;
+        }
+        return desFile;
+
+    }
+
     void md(String order) { // 新建目录
         String[] sub = order.split(" ");
         String[] subOrder = sub[1].split("/");
@@ -191,21 +223,21 @@ import java.util.*;
 
         System.out.println("目录新建成功！");
 
-        }
+    }
 
-        void dir(String order) {     // 显示当前目录下的文件和子目录
-            int i;
-            int currentDisk1 = 0;
-            int m = 0;
-            String[] subOrder = order.split(" ");
+    void dir(String order) {     // 显示当前目录下的文件和子目录
+        int i;
+        int currentDisk1 = 0;
+        int m = 0;
+        String[] subOrder = order.split(" ");
 
-            if (subOrder.length > 1) {     // 输入信息为 dir user/sa/sfds 这类指令
-                String[] subOrder1 = subOrder[1].split("/");
-                if (subOrder1.length == 0) {
-                    currentDisk1 = root;
-                    System.out.println(printDir(currentDisk1));
-                    return;
-                }
+        if (subOrder.length > 1) {     // 输入信息为 dir user/sa/sfds 这类指令
+            String[] subOrder1 = subOrder[1].split("/");
+            if (subOrder1.length == 0) {
+                currentDisk1 = root;
+                System.out.println(printDir(currentDisk1));
+                return;
+            }
             currentDisk1 = seekDir(subOrder1);
             if (currentDisk1 == -4) { // 未找到相关项
                 return;
@@ -266,7 +298,7 @@ import java.util.*;
         int m = 0;
         String[] subOrder = order.split(" ");
         String[] subOrder1 = subOrder[1].split("/");
-        if(subOrder1.length == 0){
+        if (subOrder1.length == 0) {
             System.out.println("根目录无法删除！");
             return;
         }
@@ -274,32 +306,35 @@ import java.util.*;
         if (currentDisk1 == -4) {     // 未找到相关项
             return;
         }
-        for (i = 0; i * fcbSize < size; i++) {
+        String desFile = dealRegular(order);
+        int flag = 0;
+        for (i = 1; i * fcbSize < size; i++) {
             String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
 
             fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
+            if (fileName.equals("..") || i == 2) {
+                continue;
+            }
 
-            if (fileName.equals(subOrder1[subOrder1.length - 1])) {
-
+            if (Pattern.matches(desFile, fileName) && !fileName.equals("")) {
                 boolean attribute = (disk[currentDisk1].data[12 + i * fcbSize] == 0x00) ? false : true;
                 if (!attribute) {
                     delFileorDir(i, currentDisk1);
                 } else {
                     System.out.println("文件只读，不可删除！");
                 }
-
                 // 清空
-                break;
+                flag = 1;
+                continue;
             } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
                 continue;
             }
         }
-        if (i * fcbSize == size) {
-            String extensionName = subOrder1[subOrder1.length-1];
-            if(extensionName.indexOf(".") == -1) {
+        if (i * fcbSize == size && flag == 0) {
+            String extensionName = subOrder1[subOrder1.length - 1];
+            if (extensionName.indexOf(".") == -1) {
                 System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
-            }
-            else{
+            } else {
                 System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 文件");
             }
             return;
@@ -309,7 +344,7 @@ import java.util.*;
     void delFileorDir(int i, int currentDisk1) { // 删除文件或目录项
         int desDisk = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
                 + (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
-        if(desDisk == currentLocation){
+        if (desDisk == currentLocation) {
             System.out.println("正在此目录中，无法删除，请换到其他目录下，在尝试！");
             return;
         }
@@ -327,10 +362,10 @@ import java.util.*;
         while (fat[x].next != -1) {       // 将fat 表中相关内容删除
             temp = fat[x].next;
             fat[x].next = 0;
-            disk[x].data =nullByte; // 将相应数据块，避免不可知的错误，例如在曾经使用过的数据块上新建目录时
+            disk[x].data = nullByte; // 将相应数据块，避免不可知的错误，例如在曾经使用过的数据块上新建目录时
             x = temp;
         }
-        disk[x].data =nullByte;
+        disk[x].data = nullByte;
         fat[x].next = 0;
 
         temp = i * fcbSize;
@@ -431,7 +466,7 @@ import java.util.*;
         if (currentDisk == -4) {
             return;
         }
-        currentLocation = currentDisk;
+//        currentLocation = currentDisk;
 
         int i = seekNullData();        // 在当前数据块寻找空白表项
         if (i == -3) {            // 当前数据块已用完
@@ -442,8 +477,8 @@ import java.util.*;
                 return;
             }
 
-            fat[currentLocation].next = newDisk2;      // 将新的数据块与上个用完的数据块链接
-            currentLocation = newDisk2;                // 更新当前工作的数据块
+            fat[currentDisk].next = newDisk2;      // 将新的数据块与上个用完的数据块链接
+            currentDisk = newDisk2;                // 更新当前工作的数据块
         }
         // 当空白空间足够时，才能成功新建文件
 
@@ -454,10 +489,10 @@ import java.util.*;
         }
         MyFile myFile = new MyFile(fileNme, name[1], newDisk1);   // 建立目录项
         byte[] bt = myFile.getBytes();
-        System.arraycopy(bt, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
+        System.arraycopy(bt, 0, disk[currentDisk].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
 
         fat[newDisk1].next = -1;                     // 新建立的文件只占用一个数据块，用-1表示结束于本盘块
-        currentLocation = currentDisk;                 // 更新当前工作数据块为之前目录所在位置，新建文件不应当更改当前位置
+//        currentLocation = currentDisk;                 // 更新当前工作数据块为之前目录所在位置，新建文件不应当更改当前位置
 
         System.out.println("文件新建成功！");
     }
@@ -635,15 +670,50 @@ import java.util.*;
 
     void copy(String order) {
         String[] subOrder = order.split(" ");
-        if(subOrder.length == 3) {
+        if (subOrder.length == 3) {
+            String[] subOrder1 = subOrder[1].split("/");
+            String[] subOrder2 = subOrder[2].split("/");
+            if (subOrder1[subOrder1.length - 1].indexOf("*.") != -1 ||
+                    Pattern.matches(".*\\?.*\\..*", subOrder1[subOrder1.length - 1])) { // 命令中包含 *. ，或者 ？.
+                if (subOrder2[subOrder2.length - 1].indexOf(".") == -1) {    // 此时应当只给出目录，而不能指定文件名
+                    int currentDisk = seekDir(subOrder1);
+                    String directory = printDir(currentDisk);
+                    String[] directory1 = directory.split(" "); // 获取指定目录下所有目录项
+                    int i = 0;
+                    String name = "a " + subOrder[1]; // dealRegular 参数格式，与 operate函数中order的格式一致
+                    String desFile = dealRegular(name);
+                    for (i = 0; i < directory1.length; i++) {
+                        if (Pattern.matches(desFile, directory1[i])) { // 如果包含文本文件
+                            // 这里默认带扩展名的都是文本文件
+                            String order1 = "new " + subOrder[2] + "/" + directory1[i];
+                            newFile(order1);
+                            int x = 0;
+                            String order2 = "";
+                            for (x = 0; x < subOrder1.length - 1; x++) {
+                                order2 = order2 + "/" + subOrder1[x];
+                            }
+                            order2 = "type " + order2 + directory1[i];
+//                            String order2 = "type " + subOrder[1].replaceFirst(subOrder1[subOrder1.length-1],directory1[i]);
+                            String srcText = type(order2);
+                            String order3 = "edit " + subOrder[2] + "/" + directory1[i];
+                            editText(order3, srcText);
+                        }
+                    }
+                    return;
+                } else {
+                    System.out.println("使用通配符时，不应指定文件名！");
+                    return;
+                }
+
+
+            }
             String order1 = "new " + subOrder[2];
             newFile(order1);
             String order2 = "type " + subOrder[1];
             String srcText = type(order2);
             String order3 = "edit " + subOrder[2];
             editText(order3, srcText);
-        }
-        else{
+        } else {
             System.out.println("命令输入错误！");
         }
     }
