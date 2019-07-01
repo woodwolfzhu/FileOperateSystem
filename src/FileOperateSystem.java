@@ -132,7 +132,7 @@ import java.util.*;
         String fileName = subOrder[subOrder.length - 1];
 
         int currentDisk = seekDir(subOrder);
-        if (currentDisk == -4) {
+        if (currentDisk == -4) {    // 目录不存在
             return;
         }
         currentLocation = currentDisk;
@@ -174,15 +174,15 @@ import java.util.*;
         currentLocation = newDisk1;                 // 更新当前工作数据块为新目录的位置
         fat[currentLocation].next = -1;                     // 新建立的目录只占用一个数据块，用-1表示结束于本盘块
 
-        i = seekNullData();// 在当前数据块寻找空白表项
+        i = 0;
         byte[] bt1 = myFile1.getBytes();
         System.arraycopy(bt1, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
 
-        i = seekNullData();// 在当前数据块寻找空白表项
+        i = 1;
         byte[] bt2 = myFile2.getBytes();
         System.arraycopy(bt2, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
 
-        i = seekNullData();// 在当前数据块寻找空白表项
+        i = 2;
         MyFile myFile3 = new MyFile(fileName, currentLocation);
         byte[] bt3 = myFile3.getBytes();
         System.arraycopy(bt3, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
@@ -277,8 +277,8 @@ import java.util.*;
 
                 boolean attribute = (disk[currentDisk1].data[12 + i * fcbSize] == 0x00) ? false : true;
                 if (!attribute) {
-                    currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
-                            | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
+//                    currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
+//                            | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
                     delFileorDir(i, currentDisk1);
                 } else {
                     System.out.println("文件只读，不可删除！");
@@ -298,7 +298,11 @@ import java.util.*;
 
     void delFileorDir(int i, int currentDisk1) { // 删除文件或目录项
         int desDisk = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
-                | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
+                + (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
+        if(desDisk == currentLocation){
+            System.out.println("正在此目录中，无法删除，请换到其他目录下，在尝试！");
+            return;
+        }
         String attribute = new String(disk[currentDisk1].data, 9 + i * fcbSize, 3);
         attribute = removeNullChar(attribute);
         if (attribute.equals("dir")) {
@@ -309,11 +313,14 @@ import java.util.*;
         }
         int x = desDisk;
         int temp;
+        byte[] nullByte = new byte[size];
         while (fat[x].next != -1) {       // 将fat 表中相关内容删除
             temp = fat[x].next;
             fat[x].next = 0;
+            disk[x].data =nullByte; // 将相应数据块，避免不可知的错误，例如在曾经使用过的数据块上新建目录时
             x = temp;
         }
+        disk[x].data =nullByte;
         fat[x].next = 0;
 
         temp = i * fcbSize;
@@ -785,7 +792,6 @@ import java.util.*;
                 if (disk[diskLocation].data[0 + i * fcbSize] == 0) {
                     continue;
                 }
-
                 // 获得正确的文件名
                 String fileName = new String(disk[diskLocation].data, i * fcbSize, 9);
                 fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
