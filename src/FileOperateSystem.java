@@ -283,8 +283,6 @@ import java.util.*;
 
                 boolean attribute = (disk[currentDisk1].data[12 + i * fcbSize] == 0x00) ? false : true;
                 if (!attribute) {
-//                    currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
-//                            | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
                     delFileorDir(i, currentDisk1);
                 } else {
                     System.out.println("文件只读，不可删除！");
@@ -297,7 +295,13 @@ import java.util.*;
             }
         }
         if (i * fcbSize == size) {
-            System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
+            String extensionName = subOrder1[subOrder1.length-1];
+            if(extensionName.indexOf(".") == -1) {
+                System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 目录");
+            }
+            else{
+                System.out.println("不存在" + subOrder1[subOrder1.length - 1] + " 文件");
+            }
             return;
         }
     }
