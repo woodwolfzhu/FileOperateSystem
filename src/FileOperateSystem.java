@@ -1,3 +1,5 @@
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
+
 import java.util.*;
 
 
@@ -264,6 +266,10 @@ import java.util.*;
         int m = 0;
         String[] subOrder = order.split(" ");
         String[] subOrder1 = subOrder[1].split("/");
+        if(subOrder1.length == 0){
+            System.out.println("根目录无法删除！");
+            return;
+        }
         currentDisk1 = seekDir(subOrder1);
         if (currentDisk1 == -4) {     // 未找到相关项
             return;
