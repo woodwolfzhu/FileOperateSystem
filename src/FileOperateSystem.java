@@ -1,7 +1,7 @@
 import java.util.*;
 
 
-public class FileOperateSystem {                    // 文件系统类
+    public class FileOperateSystem {                    // 文件系统类
     String desinger;    // 设计者姓名
     String version;         // 版本号
     final int size;       //盘块大小，以byte 记，2的n次幂
@@ -10,7 +10,6 @@ public class FileOperateSystem {                    // 文件系统类
     final int root;               // 根目录位置
     final int fcbSize;             // fcb 表项大小
     String currentDirectory;   // 当前目录
-    String tempDirectory;     // 临时目录
     int currentLocation;    // 记录fat表当前的位置，一直往后寻找空闲盘块，然后循环
     FAT[] fat;
     Disk[] disk;
@@ -26,7 +25,6 @@ public class FileOperateSystem {                    // 文件系统类
         root = 2;   // 数据块0、1不能使用
         allowance = totalNumber - 3; // 由上剩余数量为这么多
         currentDirectory = "/";    // 初始的当前目录就是root
-        tempDirectory = "/";
         currentLocation = 2;
         fat = new FAT[totalNumber];
         disk = new Disk[totalNumber];
@@ -116,7 +114,6 @@ public class FileOperateSystem {                    // 文件系统类
             currentDirectory = resetPath();
             System.out.print(currentDirectory + '\b' + ">:");
         }
-
     }
 
     void md(String order) { // 新建目录
@@ -191,22 +188,22 @@ public class FileOperateSystem {                    // 文件系统类
         System.arraycopy(bt3, 0, disk[currentLocation].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
 
         System.out.println("目录新建成功！");
-    }
 
-    void dir(String order) {     // 显示当前目录下的文件和子目录
-        int i;
-        int currentDisk1 = 0;
-        int m = 0;
-        String[] subOrder = order.split(" ");
+        }
 
-        if (subOrder.length > 1) {     // 输入信息为 dir user/sa/sfds 这类指令
-            String[] subOrder1 = subOrder[1].split("/");
-            if (subOrder1.length == 0) {
-                currentDisk1 = root;
-                System.out.println(printDir(currentDisk1));
-                return;
-            }
+        void dir(String order) {     // 显示当前目录下的文件和子目录
+            int i;
+            int currentDisk1 = 0;
+            int m = 0;
+            String[] subOrder = order.split(" ");
 
+            if (subOrder.length > 1) {     // 输入信息为 dir user/sa/sfds 这类指令
+                String[] subOrder1 = subOrder[1].split("/");
+                if (subOrder1.length == 0) {
+                    currentDisk1 = root;
+                    System.out.println(printDir(currentDisk1));
+                    return;
+                }
             currentDisk1 = seekDir(subOrder1);
             if (currentDisk1 == -4) { // 未找到相关项
                 return;
@@ -277,7 +274,16 @@ public class FileOperateSystem {                    // 文件系统类
             fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
 
             if (fileName.equals(subOrder1[subOrder1.length - 1])) {
-                delFileorDir(i, currentDisk1);
+
+                boolean attribute = (disk[currentDisk1].data[12 + i * fcbSize] == 0x00) ? false : true;
+                if (!attribute) {
+                    currentDisk1 = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
+                            | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
+                    delFileorDir(i, currentDisk1);
+                } else {
+                    System.out.println("文件只读，不可删除！");
+                }
+
                 // 清空
                 break;
             } else if (disk[currentDisk1].data[0 + i * fcbSize] == 0) {     // 为防止删除处于中间的文件或目录导致提前退出，所有要全部遍历
@@ -357,17 +363,18 @@ public class FileOperateSystem {                    // 文件系统类
                 continue;
             }
 
-            String extensionName = getClss(currentDisk1, i);
-            if (!extensionName.equals("dir")) {
-                System.out.println("目标文件不是目录，命令无法执行！");
-                return;
-            }
             String fileName = new String(disk[currentDisk1].data, 0 + i * fcbSize, 9);
 
             fileName = removeNullChar(fileName);    // 去掉末尾的空白字符
 
 
             if (fileName.equals(subOrder1[subOrder1.length - 1])) {
+
+                String extensionName = getClss(currentDisk1, i);
+                if (!extensionName.equals("dir")) {
+                    System.out.println("目标文件不是目录，命令无法执行！");
+                    return;
+                }
                 currentLocation = (disk[currentDisk1].data[14 + i * fcbSize] << 8 & 0xff)
                         | (disk[currentDisk1].data[15 + i * fcbSize] & 0xff);
                 break;
@@ -611,12 +618,17 @@ public class FileOperateSystem {                    // 文件系统类
 
     void copy(String order) {
         String[] subOrder = order.split(" ");
-        String order1 = "new " + subOrder[2];
-        newFile(order1);
-        String order2 = "type " + subOrder[1];
-        String srcText = type(order2);
-        String order3 = "edit " + subOrder[2];
-        editText(order3, srcText);
+        if(subOrder.length == 3) {
+            String order1 = "new " + subOrder[2];
+            newFile(order1);
+            String order2 = "type " + subOrder[1];
+            String srcText = type(order2);
+            String order3 = "edit " + subOrder[2];
+            editText(order3, srcText);
+        }
+        else{
+            System.out.println("命令输入错误！");
+        }
     }
 
     void attr(String order) {
