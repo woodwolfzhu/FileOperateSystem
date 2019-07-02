@@ -1,7 +1,7 @@
 import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
-import java.util.*;
-import java.util.regex.Pattern;
+        import java.util.*;
+        import java.util.regex.Pattern;
 
 
 public class FileOperateSystem {                    // 文件系统类
@@ -119,6 +119,7 @@ public class FileOperateSystem {                    // 文件系统类
         }
     }
 
+    // 通配符目前支持 *和? ，在copy方法中使用时，目标文件只能给出路径，不能包括文件名
     String dealRegular(String order) { // 处理通配符
         String[] subOrder = order.split(" ");
         String[] subOrder1 = subOrder[1].split("/");
@@ -130,24 +131,23 @@ public class FileOperateSystem {                    // 文件系统类
                 desFile = ".*\\..*";
             }
         } else if (desFile.indexOf("?") != -1) {
-                int x=0;
-                String des="";
-                for(x=0;x<desFile.length();x++){
-                    if(desFile.charAt(x) == '?'){
-                        des = des+ ".";
-                        continue;
-                    }else if(desFile.charAt(x) == '.'){
-                        des = des+ "\\"+".";
-                        continue;
-                    }
-                    des = des+desFile.charAt(x);
+            int x = 0;
+            String des = "";
+            for (x = 0; x < desFile.length(); x++) {
+                if (desFile.charAt(x) == '?') {
+                    des = des + ".";
+                    continue;
+                } else if (desFile.charAt(x) == '.') {
+                    des = des + "\\" + ".";
+                    continue;
                 }
-                desFile =des;
+                des = des + desFile.charAt(x);
+            }
+            desFile = des;
         } else {
             return desFile;
         }
         return desFile;
-
     }
 
     void md(String order) { // 新建目录
@@ -454,7 +454,7 @@ public class FileOperateSystem {                    // 文件系统类
 
     void nf(String[] order) {       // 采用第一种实现方式，先建立文件，之后在编辑文件
 
-        String fileNme = order[order.length - 1];
+        String fileName = order[order.length - 1];
         int newDisk1 = 0;
         newDisk1 = seekNullDisk();   // 为文件分配新的空白盘块
         if (newDisk1 == -3) {       // 所有存储空间已用完
@@ -462,13 +462,21 @@ public class FileOperateSystem {                    // 文件系统类
             return;
         }
 
-        int currentDisk = seekDir(order);// 下面的操作会对currentLocation做出不正确的改变，所以这里先把他们存下来
+        int currentDisk = seekDir(order);
         if (currentDisk == -4) {
             return;
         }
-//        currentLocation = currentDisk;
+        String directory = printDir(currentDisk);
+        if(directory.indexOf(fileName) != -1){
+            System.out.println("文件已存在！");
+            return;
+        }
 
+        int preLocation = currentLocation;
+        currentLocation = currentDisk;
         int i = seekNullData();        // 在当前数据块寻找空白表项
+        currentLocation=preLocation;
+
         if (i == -3) {            // 当前数据块已用完
             int newDisk2 = 0;
             newDisk2 = seekNullDisk();            // 寻找新的空白盘块
@@ -482,17 +490,18 @@ public class FileOperateSystem {                    // 文件系统类
         }
         // 当空白空间足够时，才能成功新建文件
 
-        String[] name = fileNme.split("\\.");
+        String[] name = fileName.split("\\.");
         if (name.length != 2) {
             System.out.println("文件格式不正确！");
             return;
         }
-        MyFile myFile = new MyFile(fileNme, name[1], newDisk1);   // 建立目录项
+
+        MyFile myFile = new MyFile(fileName, name[1], newDisk1);   // 建立目录项
         byte[] bt = myFile.getBytes();
         System.arraycopy(bt, 0, disk[currentDisk].data, 0 + i * fcbSize, fcbSize);      // 将目录项放入相应数据块中
 
         fat[newDisk1].next = -1;                     // 新建立的文件只占用一个数据块，用-1表示结束于本盘块
-//        currentLocation = currentDisk;                 // 更新当前工作数据块为之前目录所在位置，新建文件不应当更改当前位置
+
 
         System.out.println("文件新建成功！");
     }
@@ -662,6 +671,7 @@ public class FileOperateSystem {                    // 文件系统类
         while (fat[location].next != -1) {
             System.arraycopy(disk[location].data, 0, tb, num * size, size);
             location = fat[location].next;
+            num++;
         }
         System.arraycopy(disk[location].data, 0, tb, num * size, size);
         String text = new String(tb);
@@ -693,7 +703,6 @@ public class FileOperateSystem {                    // 文件系统类
                                 order2 = order2 + "/" + subOrder1[x];
                             }
                             order2 = "type " + order2 + directory1[i];
-//                            String order2 = "type " + subOrder[1].replaceFirst(subOrder1[subOrder1.length-1],directory1[i]);
                             String srcText = type(order2);
                             String order3 = "edit " + subOrder[2] + "/" + directory1[i];
                             editText(order3, srcText);
