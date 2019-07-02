@@ -1,5 +1,10 @@
 import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
+// 通配符目前支持 *和? ，在copy方法中使用时，目标文件只能给出路径，不能包括文件名
+
+// 存在的问题，copy不能把文件复制到根目录下
+// 写完Java课设再回来改吧
+
         import java.util.*;
         import java.util.regex.Pattern;
 
@@ -119,7 +124,7 @@ public class FileOperateSystem {                    // 文件系统类
         }
     }
 
-    // 通配符目前支持 *和? ，在copy方法中使用时，目标文件只能给出路径，不能包括文件名
+
     String dealRegular(String order) { // 处理通配符
         String[] subOrder = order.split(" ");
         String[] subOrder1 = subOrder[1].split("/");
